@@ -1,34 +1,87 @@
-﻿namespace pomodoro_cli
+﻿using Terminal.Gui;
+using pomodoro_cli.Gui;
+
+public class Program
 {
-    using Microsoft.Extensions.DependencyInjection;
-    using Microsoft.Extensions.Hosting;
-    using Microsoft.Extensions.Logging;
-    using Microsoft.Extensions.Logging.Debug;
-    using pomodoro_cli.Services;
+    // Views
+    private static Window topWin;
 
-    internal class Program
+    private static View splashScreenView;
+
+    static void Main(string[] args)
     {
-        static void Main(string[] args)
-        {
-            // https://siderite.dev/blog/creating-console-app-with-dependency-injection-in-#at1772592574
-            Host.CreateDefaultBuilder()
-                ?.ConfigureServices(ConfigureServices)
-                ?.ConfigureLogging((hostContext, loggingBuilder) =>
-                {
-                    loggingBuilder.AddConfiguration(hostContext.Configuration);
-                    loggingBuilder.ClearProviders();
+        Application.Init();
 
-                    loggingBuilder.AddDebug();
-                    loggingBuilder.AddConsole();
-                })
-                ?.ConfigureServices(services => services.AddSingleton<EntryPoint>())
-                ?.Build()
-                ?.Services?.GetService<EntryPoint>()?.Execute();
-        }
+        var top = Application.Top;
 
-        private static void ConfigureServices(HostBuilderContext context, IServiceCollection services)
+        // Create top level window
+        topWin = new Window(
+            new Rect(
+                0,
+                1,
+                Application.Top.Frame.Width,
+                Application.Top.Frame.Height - 1),
+            "Pomodoro Timer");
+
+        top.Add(topWin);
+
+        // Create menu bar
+        var menuBar = new MenuBar(new MenuBarItem[]
         {
-            services.AddSingleton<ITestService, TestService>();
-        }
+            new MenuBarItem("File", new MenuItem[]
+            {
+                new MenuItem("Start timer", "", () => { StartTimerClicked(); }),
+                new MenuItem("About", "", () => { AboutClicked(); }),
+                new MenuItem("Exit", "", () => { ExitClicked(); })
+            })
+        });
+
+        top.Add(menuBar);
+
+        // Splash screen
+        splashScreenView = new View();
+        splashScreenView.Height = Application.Top.Frame.Height - 1;
+        splashScreenView.Width = Dim.Fill();
+
+        var appLabel = new Label()
+        {
+            Text = "CLI Pomodoro Timer!!",
+            X = Pos.Center(),
+            Y = Pos.Center()
+        };
+
+        splashScreenView.Add(appLabel);
+
+        topWin.Add(splashScreenView);
+
+        Application.Run();
+
+        Application.Shutdown();
+    }
+
+    // Allow other classes to change the window
+    // @TODO - I'm sure there is a better way to do this...
+    public static void ChangeWin(Window newWin)
+    {
+        topWin.Subviews.First().RemoveAll();
+        topWin.Add(newWin);
+    }
+
+    // Menu clicks
+    private static void StartTimerClicked()
+    {
+        //topWin.Subviews.First().RemoveAll();
+        //topWin.Add(new TimerPromptWindow());
+        ChangeWin(new TimerPromptWindow());
+    }
+
+    private static void AboutClicked()
+    {
+        MessageBox.Query("About", "terminal based pomodoro timer", "Ok");
+    }
+
+    private static void ExitClicked()
+    {
+        Application.Shutdown();
     }
 }
